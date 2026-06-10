@@ -65,7 +65,7 @@ class SubscriptionService:
             return False
 
     def expire_subscription(self, subscription_id: str) -> bool:
-        """Mark a subscription as expired."""
+        # Mark a subscription as expired
         try:
             self.db.table("user_subscriptions").update({"status": "expired"}).eq(
                 "id", subscription_id
