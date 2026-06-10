@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 from logging.handlers import RotatingFileHandler
 from typing import Optional
@@ -46,6 +47,7 @@ class EnterpriseLogger:
         console_handler.setFormatter(console_formatter)
 
         # File Handler: DEBUG
+        os.makedirs("logs", exist_ok=True)
         file_handler = RotatingFileHandler(
             "logs/interviewpilot.log", maxBytes=10_485_769, backupCount=10  # 10MB
         )
