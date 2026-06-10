@@ -1,7 +1,5 @@
-import json
 import logging
 import sys
-import uuid
 from logging.handlers import RotatingFileHandler
 from typing import Optional
 
