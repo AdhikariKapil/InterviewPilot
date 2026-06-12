@@ -66,7 +66,7 @@ async def handle_generate_interview(
     try:
         assessment_data = {
             "id": assessment_id,
-            "userid": data.userid,
+            "user_id": data.userid,
             "assessment_type": "job_interview",
             "role": data.role,
             "level": data.level,
