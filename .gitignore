@@ -1,2 +1,6 @@
 backend/.envrc
 backend/.env
+backend/logs
+backend/__pycache__
+backend/*/__pycache__/
+backend/**.pyc
