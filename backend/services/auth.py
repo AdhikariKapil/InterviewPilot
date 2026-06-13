@@ -1,46 +1,65 @@
 import os
 
-import jwt
-from fastapi import Depends, HTTPException
+from dotenv import load_dotenv
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from database.supabase_client import supabase
 from utils.logger import get_logger
 
+load_dotenv()
+
 logger = get_logger("auth_service")
-
 security = HTTPBearer()
-
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
 
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> str:
-    # Validate the JWT and return the user_id
-    token = credentials.credentials
-    try:
-        if not SUPABASE_JWT_SECRET:
-            logger.error("SUPABASE_JWT_SECRET not set in environment")
-            raise ValueError("SUPABASE_JWT_SECRET not set in environment")
 
-        payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audiencce="authenticated",
+    token = credentials.credentials
+
+    if not token:
+        logger.error("No token provided in Authorization header")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="No authentication token provided",
         )
 
-        user_id = payload.get("sub")
-        if not user_id:
-            logger.error("JWT payload missing sub")
-            raise HTTPException(status_code=401, detail="Invalid token")
+    try:
+        user_response = supabase.auth.get_user(token)
 
-        logger.info(f"Authenticated user: {user_id}")
+        if not user_response:
+            logger.error("Supabase auth.get_user returned None")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication service unavailable",
+            )
+
+        if not hasattr(user_response, "user") or user_response.user is None:
+            logger.error("Supabase auth response missing 'user' or user is None")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token - user not found",
+            )
+
+        user_id = user_response.user.id
+
+        if not user_id or not isinstance(user_id, str) or len(user_id.strip()) == 0:
+            logger.error("Invalid user_id in auth response")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid user identifier",
+            )
+
+        logger.info(
+            "User authenticated successfully",
+            extra={"user_id": user_id, "auth_method": "jwt"},
+        )
         return user_id
-    except jwt.ExpiredSignatureError as error:
-        logger.warning("JWT expired")
-        raise HTTPException(status_code=401, detail="Token expired")
 
-    except jwt.InvalidTokenError as error:
-        logger.error(f"Invalid token: {error}")
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as error:
+        logger.error(f"Authorization failed: {error}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token"
+        )
