@@ -1,10 +1,11 @@
 import uuid
 from datetime import datetime
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 from database.supabase_client import supabase
 from models.interview_model import GenerateRequest, GenerateResponse
+from services.auth import get_current_user
 from services.ip_tracking import IPTrackingService
 from services.llm_service import LLMService
 from services.subscription_service import SubscriptionService
@@ -14,7 +15,7 @@ logger = get_logger("interview_controller")
 
 
 async def handle_generate_interview(
-    request: Request, data: GenerateRequest
+    request: Request, data: GenerateRequest, user_id: str = Depends(get_current_user)
 ) -> GenerateResponse:
     client = request.client
 
@@ -23,7 +24,7 @@ async def handle_generate_interview(
         client_ip = "unknown"
     else:
         client_ip = client.host
-        logger.info(f"Generate request from IP: {client_ip}, user: {data.userid}")
+        logger.info(f"Generate request from IP: {client_ip}, user: {user_id}")
 
     ip_service = IPTrackingService()
     subscription_service = SubscriptionService()
@@ -32,16 +33,16 @@ async def handle_generate_interview(
 
     if not can_access_free:
         has_subscription = subscription_service.has_active_subscription(
-            data.userid, "core_interview"
+            user_id, "core_interview"
         )
         if not has_subscription:
             raise HTTPException(
                 status_code=403,
                 detail="Free limit reached. Please subscribe to continue.",
             )
-        logger.info(f"User {data.userid} accessed via subscription")
+        logger.info(f"User {user_id} accessed via subscription")
     else:
-        logger.info(f"User {data.userid} accessed via free tier")
+        logger.info(f"User {user_id} accessed via free tier")
 
         # Generate questions
 
@@ -66,7 +67,7 @@ async def handle_generate_interview(
     try:
         assessment_data = {
             "id": assessment_id,
-            "user_id": data.userid,
+            "user_id": user_id,
             "assessment_type": "job_interview",
             "role": data.role,
             "level": data.level,

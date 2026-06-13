@@ -11,7 +11,6 @@ class GenerateRequest(BaseModel):
     type: str
     techstack: str
     amount: int
-    userid: str
 
 
 class AgentResponseRequest(BaseModel):
