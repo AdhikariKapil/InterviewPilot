@@ -1,7 +1,7 @@
 import json
 import os
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 import httpx
 from g4f.client import Client
@@ -250,7 +250,13 @@ class LLMService:
         logger.info(f"LLM provider initialized: {self.provider}")
 
     async def generate_questions(
-        self, role: str, level: str, type: str, techstack: str, amount: int
+        self,
+        role: Optional[str] = None,
+        level: Optional[str] = None,
+        type: Optional[str] = None,
+        techstack: Optional[str] = None,
+        amount: Optional[int] = None,
+        ielts_prompt: Optional[str] = None,
     ) -> List[str]:
         prompt = f"""
         Prepare questions for a job interview.
@@ -267,4 +273,7 @@ class LLMService:
         Thank you!
         """
 
-        return await self._llm.generate_questions(prompt)
+        if ielts_prompt:
+            return await self._llm.generate_questions(ielts_prompt)
+        else:
+            return await self._llm.generate_questions(prompt)
